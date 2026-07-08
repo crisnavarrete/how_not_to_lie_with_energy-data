@@ -1,2 +1,4 @@
 *.xlsx filter=lfs diff=lfs merge=lfs -text
 *.csv filter=lfs diff=lfs merge=lfs -text
+Datasets/clean/hourly_gen_2000_2024.RData filter=lfs diff=lfs merge=lfs -text
+Datasets/clean/hourly_generation_long_2000_2024.RData filter=lfs diff=lfs merge=lfs -text

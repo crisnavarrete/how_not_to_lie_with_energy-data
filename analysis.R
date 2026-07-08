@@ -1,447 +1,1643 @@
+# Config ----
+
 pacman::p_load(
-  tidyverse,        
-  ggplot2,          
-  scales,           
-  forcats,          
-  sf,               
-  rnaturalearth,    
-  rnaturalearthdata,
-  readxl,           
-  chilemapas,
+  tidyverse,
+  ggplot2,
+  scales,
+  forcats,
+  readxl,
   here,
   readr,
   stringr,
   skimr,
   patchwork,
   cowplot,
-  rnaturalearth,
   ggrepel,
-  writexl
+  writexl,
+  paletteer,
+  ggstream
 )
 
+options(scipen = 999)
 
-rm(list = ls())
-options(scipen=999)
+## 0. Paths ----
 
-# Data ----
-gross_gen <- read_excel(here("Datasets", "full_energy_dfs_2026_02_10.xlsx"),
-                        sheet = "Gross Energy Generation (GWh)")
+clean_dir <- here::here("Datasets", "clean")
+output_dir <- here::here("Outputs")
+plots_dir <- here::here("Outputs", "figures")
+tables_dir <- here::here("Outputs", "tables")
 
-installed_cap <- read_excel(here("Datasets", "full_energy_dfs_2026_02_10.xlsx"),
-                        sheet = "Installed Capacity (MW)")
+dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+dir.create(plots_dir, recursive = TRUE, showWarnings = FALSE)
+dir.create(tables_dir, recursive = TRUE, showWarnings = FALSE)
 
-primary_supply <- read_excel(here("Datasets", "full_energy_dfs_2026_02_10.xlsx"),
-                            sheet = "Primary Energy Supply Mix (Tcal")
+# I Data ----
 
-secondary_consumption <- read_excel(here("Datasets", "full_energy_dfs_2026_02_10.xlsx"),
-                            sheet = "Final Energy ConsumptionSeconda")
+## 1. Clean BNE outputs ----
 
-consumption_sector <- read_excel(here("Datasets", "full_energy_dfs_2026_02_10.xlsx"),
-                            sheet = "Total Energy Consumption by Sec")
+load(here("Datasets", "clean", "bne_2008_2024_cleaned.RData"))
 
-electricity_consumption_sector <- read_excel(here("Datasets", "full_energy_dfs_2026_02_10.xlsx"),
-                            sheet = "Electricity Consumption by Sect")
+energy_supply_2008_2024 <- readRDS(here("Datasets", "clean", "energy_supply_2008_2024.rds"))
+energy_primary_supply_2008_2024 <- readRDS(here("Datasets", "clean", "energy_primary_supply_2008_2024.rds"))
+energy_primary_production_2008_2024 <- readRDS(here("Datasets", "clean", "energy_primary_production_2008_2024.rds"))
+energy_primary_import_2008_2024 <- readRDS(here("Datasets", "clean", "energy_primary_import_2008_2024.rds"))
 
-energy_intensity <- read_excel(here("Datasets", "full_energy_dfs_2026_02_10.xlsx"),
-                            sheet = "Energy Intensity")
+energy_consumption_total_2008_2024 <- readRDS(here("Datasets", "clean", "energy_consumption_total_2008_2024.rds"))
+energy_consumption_final_2008_2024 <- readRDS(here("Datasets", "clean", "energy_consumption_final_2008_2024.rds"))
+energy_consumption_transformation_2008_2024 <- readRDS(here("Datasets", "clean", "energy_consumption_transformation_2008_2024.rds"))
 
-ghg_emissions <- read_excel(here("Datasets", "full_energy_dfs_2026_02_10.xlsx"),
-                            sheet = "Greenhouse Gas (GHG) Emissions")
+bne_year_item_2008_2024 <- readRDS(here("Datasets", "clean", "bne_year_item_2008_2024.rds"))
+bne_year_category_2008_2024 <- readRDS(here("Datasets", "clean", "bne_year_category_2008_2024.rds"))
+bne_year_section_2008_2024 <- readRDS(here("Datasets", "clean", "bne_year_section_2008_2024.rds"))
+bne_year_fuel_2008_2024 <- readRDS(here("Datasets", "clean", "bne_year_fuel_2008_2024.rds"))
 
-ghg_emissions_region <- read_excel(here("Datasets", "full_energy_dfs_2026_02_10.xlsx"),
-                            sheet = "GHG Emissions Inventory by Regi")
+consumption_final_year_sector_2008_2024 <- readRDS(here("Datasets", "clean", "consumption_final_year_sector_2008_2024.rds"))
+consumption_final_year_fuel_2008_2024 <- readRDS(here("Datasets", "clean", "consumption_final_year_fuel_2008_2024.rds"))
+consumption_final_year_sector_fuel_2008_2024 <- readRDS(here("Datasets", "clean", "consumption_final_year_sector_fuel_2008_2024.rds"))
 
-co2_emissions_removals <- read_excel(here("Datasets", "full_energy_dfs_2026_02_10.xlsx"),
-                                     sheet = "Total CO2 Emissions and Removal")
+transformation_year_category_2008_2024 <- readRDS(here("Datasets", "clean", "transformation_year_category_2008_2024.rds"))
+primary_supply_year_fuel_2008_2024 <- readRDS(here("Datasets", "clean", "primary_supply_year_fuel_2008_2024.rds"))
+primary_import_year_fuel_2008_2024 <- readRDS(here("Datasets", "clean", "primary_import_year_fuel_2008_2024.rds"))
+primary_production_year_fuel_2008_2024 <- readRDS(here("Datasets", "clean", "primary_production_year_fuel_2008_2024.rds"))
 
-ch4_emissions_removals <- read_excel(here("Datasets", "full_energy_dfs_2026_02_10.xlsx"),
-                                     sheet = "Total CH4 Emissions and Removal")
+bne_dci_factors_2008_2024 <- readRDS(here("Datasets", "clean", "bne_dci_factors_2008_2024.rds"))
+bne_dci_final_2008_2024 <- readRDS(here("Datasets", "clean", "bne_dci_final_2008_2024.rds"))
+ci_year_2008_2024 <- readRDS(here("Datasets", "clean", "ci_year_2008_2024.rds"))
+dci_2008_2024 <- readRDS(here("Datasets", "clean", "dci_2008_2024.rds"))
+dci_decomposed_2008_2024 <- readRDS(here("Datasets", "clean", "dci_decomposed_2008_2024.rds"))
+dci_long_2008_2024 <- readRDS(here("Datasets", "clean", "dci_long_2008_2024.rds"))
 
-consumption_total_2008_2023 <- read_excel(here("Datasets", "consumption_total_2008_2023.xlsx"))
+## 2. External electricity datasets ----
+installed_cap <- read_excel(
+  here("Datasets", "full_energy_dfs_2026_02_10.xlsx"),
+  sheet = "Installed Capacity (MW)"
+)
 
-primary_import_2008_2023 <- read_excel(here("Datasets", "primary_import_2008_2023.xlsx"))
+hourly_gen_2000_2024 <- read_excel(
+  here("Datasets", "full_energy_dfs_2026_02_10.xlsx"),
+  sheet = "Hourly Generation by Plant"
+)
 
-# Data handling -----
+# II Data handling ----
 
-skim(gross_gen)
+## 1. Primary production by  fuel ----
+primary_production_fuel_long_2008_2024 <- primary_production_year_fuel_2008_2024 |>
+  group_by(año, fuel) |>
+  summarise(
+    tcal = sum(tcal, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  rename(
+    year = año,
+    energy_type = fuel
+  ) |>
+  arrange(year, energy_type)
 
-## Generation ----
-gross_gen_long <- gross_gen |> 
-  select(-total) |> 
-  pivot_longer(-year, names_to = "energy_type", values_to = "gwh")
+primary_production_fuel_share_2008_2024 <- primary_production_fuel_long_2008_2024 |>
+  group_by(year) |>
+  mutate(
+    share = tcal / sum(tcal, na.rm = TRUE)
+  ) |>
+  ungroup()
 
-## Installed capacity -----
-installed_cap_long <- installed_cap |> 
-  select(-total) |> 
-  pivot_longer(-year, names_to = "energy_type", values_to = "mw")
-
-
-## Consumption ----
-skim(consumption_total_2008_2023)
-
-consumption_total_2008_2023 %>%
-  count(combustible) %>%
-  arrange(combustible) %>%
+primary_production_fuel_share_2008_2024|>
+  count(energy_type) |>
+  arrange(energy_type) |>
   print(n = Inf)
 
-consumption_total_2008_2023 <- consumption_total_2008_2023 |>
-  mutate(tj = tcal * 4.1868)
 
-## Emissions ----
-co2_long <- co2_emissions_removals |> 
-  select(-total_national_emissions, -total_national_emissions_and_removals) |>
-  pivot_longer(-year, names_to = "sector", values_to = "kt")
+### by original combustible 
+primary_production_combustible_long_2008_2024 <- primary_production_year_fuel_2008_2024 |>
+  group_by(año, combustible) |>
+  summarise(
+    tcal = sum(tcal, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  rename(
+    year = año,
+    energy_type = combustible
+  ) |>
+  arrange(year, energy_type)
 
-ghg_long <- ghg_emissions |> 
-  select(-total_inventory) |>
-  pivot_longer(-year, names_to = "sector", values_to = "MtCO2Eq")
-
-## DCI ----
-### Recode combustibles
-
-consumption_total_2008_2023 <- consumption_total_2008_2023 %>%
+primary_production_combustible_share_2008_2024 <- primary_production_combustible_long_2008_2024 |>
+  group_by(year) |>
   mutate(
-    fuel = case_when(
-      combustible %in% c(
-        "Carbón",
-        "Coque Mineral",
-        "Gas Coque",
-        "Gas de Altos Hornos",
-        "Alquitrán") ~ "Coal",
-      combustible %in% c(
-        "Coque de Petróleo") ~ "Petcoke",
-      combustible %in% c(
-        "Petróleo Diesel") ~ "Diesel",
-      combustible %in% c(
-        "Petróleo Combustible",
-        "D.I. de Petróleo") ~ "Fuel Oil",
-      combustible %in% c(
-        "Petróleo Crudo") ~ "Crude Oil",
-      combustible %in% c(
-        "Gasolina de motor",
-        "Gasolina de Aviación",
-        "Kerosene",
-        "Kerosene de Aviación",
-        "Nafta") ~ "Oil Products",
-      combustible %in% c(
-        "Gas Natural",
-        "Gas Corriente",
-        "Gas de Refinería") ~ "Natural Gas",
-      combustible %in% c(
-        "Gas Licuado") ~ "LPG",
-      combustible %in% c(
-        "Biomasa",
-        "Pellet de Biomasa") ~ "Biomass",
-      combustible == "Biogás" ~ "Biogas",
-      combustible == "Licor Negro" ~ "Black Liquor",
-      combustible %in% c(
-        "Electricidad",
-        "Energía Eólica",
-        "Energía Hídrica",
-        "Energía Solar",
-        "Geotermia") ~ "Non-carbon",
-      TRUE ~ "Other"
-    )
-  )
+    share = tcal / sum(tcal, na.rm = TRUE)
+  ) |>
+  ungroup()
 
-consumption_total_2008_2023 %>%
-  count(fuel) %>%
-  arrange(fuel) %>%
+primary_production_combustible_share_2008_2024|>
+  count(energy_type) |>
+  arrange(energy_type) |>
   print(n = Inf)
 
-consumption_total_2008_2023 %>%
-  filter(fuel == "Non-carbon") %>%
-  summarise(tcal_sum = sum(tcal, na.rm = TRUE))
-
-### emission factors 
-factors_dci <- tibble(
-  fuel = c(
-    "Coal",
-    "Petcoke",
-    "Diesel",
-    "Fuel Oil",
-    "Crude Oil",
-    "Oil Products",
-    "Natural Gas",
-    "LPG",
-    "Biomass",
-    "Biogas",
-    "Black Liquor",
-    "Non-carbon"
-  ),
-  fe_CO2_tCO2_TJ = c(
-    94.6,  # Coal
-    97.5,  # Petcoke
-    74.1,  # Diesel
-    77.4,  # Fuel oil
-    73.3,  # Crude oil (IPCC default)
-    73.3,  # Refined oil average
-    56.1,  # Natural gas
-    63.1,  # LPG
-    0.0,   # Biomass
-    0.0,   # Biogas
-    0.0,   # Black liquor
-    0.0    # Electricity from non-carbon sources
-  )
-)
-
-energy_dci <- consumption_total_2008_2023 %>%
-  left_join(factors_dci, by = "fuel")
-
-
-
-#### Check for unmatched fuels
-energy_dci %>%
-  filter(is.na(fe_CO2_tCO2_TJ)) %>%
-  distinct(fuel)
-
-#### Estimating the DCI 
-ci_year <- energy_dci %>%
-  group_by(año) %>%
-  summarise(
-    total_energy_tj = sum(tj, na.rm = TRUE),
-    total_emissions = sum(tj * fe_CO2_tCO2_TJ, na.rm = TRUE),
-    CI_t = total_emissions / total_energy_tj,
-    .groups = "drop"
-  )
-
-CI_coal <- factors_dci %>%
-  filter(fuel == "Coal") %>%
-  pull(fe_CO2_tCO2_TJ)
-
-dci <- ci_year %>%
-  mutate(
-    DCI = 1 - (CI_t / CI_coal)
-  )
-
-print(dci)
-
-#### Decomposing the DCI
-
-energy_dci <- energy_dci %>%
-  mutate(
-    is_noncarbon = fuel == "Non-carbon",
-    is_oil_gas = fuel %in% c(
-      "Diesel", "Fuel Oil", "Crude Oil",
-      "Oil Products", "Natural Gas", "LPG"
-    )
-  )
-
-energy_shares <- energy_dci %>%
-  group_by(año) %>%
-  summarise(
-    total_energy_tj = sum(tj, na.rm = TRUE),
-    noncarbon_energy_tj = sum(tj[is_noncarbon], na.rm = TRUE),
-    .groups = "drop"
-  ) %>%
-  mutate(
-    DCINC = noncarbon_energy_tj / total_energy_tj
-  )
-
-dci_decomposed <- dci %>%
-  left_join(energy_shares, by = "año") %>%
-  mutate(
-    DCIOG = DCI - DCINC
-  )
-
-all.equal(
-  dci_decomposed$DCI,
-  dci_decomposed$DCIOG + dci_decomposed$DCINC
-)
-
-dci_long <- dci_decomposed %>%
-  select(año, DCI, DCIOG, DCINC) %>%
+## 2. Installed capacity ----
+installed_cap_long <- installed_cap |>
+  select(-total) |>
   pivot_longer(
-    cols = c(DCI, DCIOG, DCINC),
-    names_to = "indicator",
-    values_to = "value"
+    cols = -year,
+    names_to = "energy_type",
+    values_to = "mw"
+  ) |>
+  mutate(
+    energy_type = case_when(
+      energy_type == "coal" ~ "Coal",
+      energy_type == "concentrated_solar_power" ~ "Concentrated solar",
+      energy_type == "diesel_oil" ~ "Diesel oil",
+      energy_type == "geothermal" ~ "Geothermal",
+      energy_type == "hydro" ~ "Hydro",
+      energy_type == "natural_gas" ~ "Natural gas",
+      energy_type == "other" ~ "Other",
+      energy_type == "solar_photovoltaic" ~ "Solar pv",
+      energy_type == "wind_power" ~ "Wind",
+      TRUE ~ str_to_sentence(str_replace_all(energy_type, "_", " "))
+    )
   )
 
+installed_cap_share_2008_2024 <- installed_cap_long |>
+  filter(year >= 2008, year <= 2024) |>
+  group_by(year) |>
+  mutate(
+    share = mw / sum(mw, na.rm = TRUE)
+  ) |>
+  ungroup()
 
-# Plots ----
+## 3. Hourly generation ----
+hourly_gen_2000_2024 <- hourly_gen_2000_2024 |>
+  mutate(
+    date = as.Date(date),
+    year = lubridate::year(date)
+  )
 
-## Gen -----
-gross_gen_long |> 
-  group_by(year) |> 
-  mutate(share = gwh / sum(gwh)) |> 
-  ggplot(aes(x = year, y = share, fill = energy_type)) +
-  geom_col() +
-  scale_y_continuous(labels = scales::percent) +
-  scale_x_continuous(breaks = gross_gen_long$year) +
-  labs(x = "Year", y = "Share of Gross Generation", fill = "Energy Type") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-gross_gen_long |> 
-  ggplot(aes(x = year, y = gwh, fill = energy_type)) +
-  geom_col() +
-  scale_y_continuous(labels = scales::comma) +
-  scale_x_continuous(breaks = gross_gen_long$year) + 
-  labs(x = "Year", y = "Gross Generation (GWh)", fill = "Energy Type") +
-  theme_minimal() + 
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-## Primary x Import ----
-primary_import_2008_2023 <- primary_import_2008_2023 |> 
+hourly_gen_long_2000_2024 <- hourly_gen_2000_2024 |>
+  pivot_longer(
+    cols = starts_with("h"),
+    names_to = "hour",
+    values_to = "gwh"
+  ) |>
+  mutate(
+    year = lubridate::year(date),
+    month = lubridate::month(date),
+    month_name = lubridate::month(date, label = TRUE, abbr = FALSE),
+    day = lubridate::day(date),
+    hour_num = as.numeric(str_remove(hour, "^h")),
+    energy_type = str_replace_all(energy_type, "_", " "),
+    energy_type = str_to_sentence(energy_type)
+  ) |>
   filter(
-    combustible %in% c("Petróleo Crudo", "Gas Natural", "Carbón"))
+    day <= 7
+  ) |>
+  group_by(year, month, month_name, energy_type, hour_num) |>
+  summarise(
+    mean_gwh = mean(gwh, na.rm = TRUE),
+    .groups = "drop"
+  )
 
-primary_import_2008_2023 %>%
-  ggplot(aes(x = año, y = tcal, fill = categoria)) +
-  geom_col() +
-  scale_y_continuous(labels = scales::comma) +
-  scale_x_continuous(breaks = unique(primary_import_2008_2023$año)) +
-  labs(x = "Year", y = "Primary Supply & Imports (Tcal)", fill = "Category") +
-  facet_wrap(~combustible, scales = "free_y") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+## 4. BNE plot-ready tables ----
+final_consumption_fuel_share_2008_2024 <- consumption_final_year_fuel_2008_2024 |>
+  group_by(año) |>
+  mutate(
+    share = tcal / sum(tcal, na.rm = TRUE)
+  ) |>
+  ungroup()
 
-primary_import_2008_2023 %>%
-  ggplot(aes(x = año, y = tcal, fill = categoria)) +
-  geom_col() +
-  scale_y_continuous(labels = scales::comma) +
-  scale_x_continuous(breaks = unique(primary_import_2008_2023$año)) +
-  labs(x = "Year", y = "Primary Supply & Imports (Tcal)", fill = "Category") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+final_consumption_sector_share_2008_2024 <- consumption_final_year_sector_2008_2024 |>
+  group_by(año) |>
+  mutate(
+    share = tcal / sum(tcal, na.rm = TRUE)
+  ) |>
+  ungroup()
 
+final_consumption_sector_fuel_share_2008_2024 <- consumption_final_year_sector_fuel_2008_2024 |>
+  group_by(año, sector_consumo) |>
+  mutate(
+    share = tcal / sum(tcal, na.rm = TRUE)
+  ) |>
+  ungroup()
 
-## Installed cap -----
-installed_cap_long |> 
-  group_by(year) |> 
-  mutate(share = mw / sum(mw)) |> 
+primary_supply_fuel_share_2008_2024 <- primary_supply_year_fuel_2008_2024 |>
+  group_by(año) |>
+  mutate(
+    share = tcal / sum(tcal, na.rm = TRUE)
+  ) |>
+  ungroup()
+
+primary_import_main_fuels_2008_2024 <- primary_import_year_fuel_2008_2024 |>
+  filter(
+    combustible %in% c("Petróleo Crudo", "Gas Natural", "Carbón")
+  ) |>
+  mutate(
+    combustible = recode(
+      combustible,
+      "Petróleo Crudo" = "Crude oil",
+      "Gas Natural" = "Natural gas",
+      "Carbón" = "Coal"
+    ),
+    combustible = factor(combustible, levels = c("Crude oil", "Coal", "Natural gas"))
+  )
+
+## 5. DCI plot-ready tables ----
+dci_long_2008_2024 <- dci_long_2008_2024 |>
+  mutate(
+    indicator = factor(
+      indicator,
+      levels = c("DCI", "DCIOG", "DCINC"),
+      labels = c("DCI", "DCIOG", "DCINC")
+    )
+  )
+
+dci_fuel_contribution_2008_2024 <- bne_dci_final_2008_2024 |>
+  group_by(año, fuel_dci) |>
+  summarise(
+    energy_tj = sum(tj, na.rm = TRUE),
+    emissions_tCO2 = sum(tj * fe_CO2_tCO2_TJ, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  group_by(año) |>
+  mutate(
+    energy_share = energy_tj / sum(energy_tj, na.rm = TRUE),
+    emissions_share = emissions_tCO2 / sum(emissions_tCO2, na.rm = TRUE)
+  ) |>
+  ungroup()
+
+dci_sector_contribution_2008_2024 <- bne_dci_final_2008_2024 |>
+  group_by(año, sector_consumo) |>
+  summarise(
+    energy_tj = sum(tj, na.rm = TRUE),
+    emissions_tCO2 = sum(tj * fe_CO2_tCO2_TJ, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  group_by(año) |>
+  mutate(
+    energy_share = energy_tj / sum(energy_tj, na.rm = TRUE),
+    emissions_share = emissions_tCO2 / sum(emissions_tCO2, na.rm = TRUE)
+  ) |>
+  ungroup()
+
+# III Checks ----
+## 1. Data coverage ----
+
+year_check_2008_2024 <- tibble(
+  año = 2008:2024
+) |>
+  left_join(
+    bne_2008_2024_cleaned |>
+      count(año, name = "n_rows"),
+    by = "año"
+  )
+
+if (any(is.na(year_check_2008_2024$n_rows))) {
+  print(year_check_2008_2024)
+  stop("Some years are missing from the cleaned BNE dataset.")
+}
+
+## 2. DCI consistency ----
+
+dci_check_2008_2024 <- max(
+  abs(
+    dci_decomposed_2008_2024$DCI -
+      (dci_decomposed_2008_2024$DCIOG + dci_decomposed_2008_2024$DCINC)
+  ),
+  na.rm = TRUE
+)
+
+if (dci_check_2008_2024 > 1e-10) {
+  stop("DCI decomposition does not hold within tolerance.")
+}
+
+bne_dci_final_2008_2024 |>
+  filter(is.na(fe_CO2_tCO2_TJ) | is.na(fuel_dci)) |>
+  distinct(combustible, fuel_dci) |>
+  print(n = Inf)
+
+# IV Tables ----
+## 1. Main summary tables ----
+
+final_consumption_change_2008_2024 <- consumption_final_year_sector_2008_2024 |>
+  group_by(sector_consumo) |>
+  arrange(año) |>
+  summarise(
+    tcal_2008 = tcal[año == 2008][1],
+    tcal_2024 = tcal[año == 2024][1],
+    absolute_change_tcal = tcal_2024 - tcal_2008,
+    percent_change = (tcal_2024 / tcal_2008) - 1,
+    .groups = "drop"
+  ) |>
+  arrange(desc(absolute_change_tcal))
+
+fuel_change_2008_2024 <- consumption_final_year_fuel_2008_2024 |>
+  group_by(fuel) |>
+  arrange(año) |>
+  summarise(
+    tcal_2008 = tcal[año == 2008][1],
+    tcal_2024 = tcal[año == 2024][1],
+    absolute_change_tcal = tcal_2024 - tcal_2008,
+    percent_change = (tcal_2024 / tcal_2008) - 1,
+    .groups = "drop"
+  ) |>
+  arrange(desc(absolute_change_tcal))
+
+dci_change_2008_2024 <- dci_decomposed_2008_2024 |>
+  arrange(año) |>
+  summarise(
+    DCI_2008 = DCI[año == 2008][1],
+    DCI_2024 = DCI[año == 2024][1],
+    DCIOG_2008 = DCIOG[año == 2008][1],
+    DCIOG_2024 = DCIOG[año == 2024][1],
+    DCINC_2008 = DCINC[año == 2008][1],
+    DCINC_2024 = DCINC[año == 2024][1],
+    DCI_change = DCI_2024 - DCI_2008,
+    DCIOG_change = DCIOG_2024 - DCIOG_2008,
+    DCINC_change = DCINC_2024 - DCINC_2008
+  )
+
+write_xlsx(
+  list(
+    "Final consumption sector" = consumption_final_year_sector_2008_2024,
+    "Final consumption fuel" = consumption_final_year_fuel_2008_2024,
+    "Final sector fuel" = consumption_final_year_sector_fuel_2008_2024,
+    "Final sector share" = final_consumption_sector_share_2008_2024,
+    "Final fuel share" = final_consumption_fuel_share_2008_2024,
+    "Primary supply fuel" = primary_supply_year_fuel_2008_2024,
+    "Primary imports fuel" = primary_import_year_fuel_2008_2024,
+    "DCI" = dci_2008_2024,
+    "DCI decomposed" = dci_decomposed_2008_2024,
+    "DCI long" = dci_long_2008_2024,
+    "DCI fuel contribution" = dci_fuel_contribution_2008_2024,
+    "DCI sector contribution" = dci_sector_contribution_2008_2024,
+    "Final sector change" = final_consumption_change_2008_2024,
+    "Final fuel change" = fuel_change_2008_2024,
+    "DCI change" = dci_change_2008_2024
+  ),
+  here("Outputs", "tables", "analysis_tables_2008_2024.xlsx")
+)
+
+# V Figures ----
+
+## 1. Generation ----
+## Primary production share 
+plot_primary_production_share_2008_2024 <- primary_production_fuel_share_2008_2024 |>
   ggplot(aes(x = year, y = share, fill = energy_type)) +
-  geom_col() +
-  scale_y_continuous(labels = scales::percent) +
-  scale_x_continuous(breaks = installed_cap_long$year) +
-  labs(x = "Year", y = "Share of Installed Capacity", fill = "Energy Type") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-
-installed_cap_long |> 
-  ggplot(aes(x = year, y = mw, fill = energy_type)) +
-  geom_col() +
-  scale_y_continuous(labels = scales::comma) +
-  scale_x_continuous(breaks = installed_cap_long$year) +
-  labs(x = "Year", y = "Installed Capacity (MW)", fill = "Energy Type") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-## Consumption ----
-consumption_total_2008_2023 |> 
-  ggplot(aes(x = año, y = tcal, fill = combustible)) +
-  geom_col() +
-  scale_y_continuous(labels = scales::comma) +
-  scale_x_continuous(breaks = consumption_total_2008_2023$año) +
-  labs(x = "Year", y = "Consumption (tcal)", fill = "Energy Type") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-consumption_total_2008_2023 |> 
-  ggplot(aes(x = año, y = tcal, fill = fuel)) +
-  geom_col() +
-  scale_y_continuous(labels = scales::comma) +
-  scale_x_continuous(breaks = consumption_total_2008_2023$año) +
-  labs(x = "Year", y = "Consumption (tcal)", fill = "Energy Type") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-consumption_total_2008_2023 %>%
-  group_by(año) %>%
-  summarise(total_tcal = sum(tcal, na.rm = TRUE)) %>%
-  arrange(año)
-
-## Emissions ----
-
-co2_long %>%
-  group_by(year, sector) %>% 
-  summarise(total_kt = sum(kt, na.rm = TRUE), .groups = "drop") %>%
-  group_by(year) %>%
-  mutate(total_emissions = sum(total_kt, na.rm = TRUE)) %>%
-  ungroup() %>%
-  ggplot(aes(x = year, y = total_kt, fill = sector)) +
-  geom_col() +
-  geom_line(aes(y = total_emissions, group = 1), color = "black", linewidth = 1) +
-  geom_point(aes(y = total_emissions), color = "black", size = 1.5) +
-  scale_y_continuous(labels = scales::comma) +
-  scale_x_continuous(breaks = co2_long$year) +
-  labs(x = "Year", y = "CO2 Emissions (kt)", fill = "Sector") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-co2_long %>%
-  filter(sector != "land_use_change_and_forestry") %>%
-  group_by(year, sector) %>% 
-  summarise(total_kt = sum(kt, na.rm = TRUE), .groups = "drop") %>%
-  group_by(year) %>%
-  mutate(total_emissions = sum(total_kt, na.rm = TRUE)) %>%
-  ungroup() %>%
-  ggplot(aes(x = year, y = total_kt, fill = sector)) +
-  geom_col()  +
-  scale_y_continuous(labels = scales::comma) +
-  scale_x_continuous(breaks = co2_long$year) +
-  labs(x = "Year", y = "CO2 Emissions (kt)", fill = "Sector") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-ghg_long %>%
-  group_by(year, sector) %>% 
-  summarise(total_MtCO2Eq = sum(MtCO2Eq, na.rm = TRUE), .groups = "drop") %>%
-  group_by(year) %>%
-  mutate(total_emissions = sum(total_MtCO2Eq, na.rm = TRUE)) %>%
-  ungroup() %>%
-  ggplot(aes(x = year, y = total_MtCO2Eq, fill = sector)) +
-  geom_col()  +
-  scale_y_continuous(labels = scales::comma) +
-  scale_x_continuous(breaks = ghg_long$year) +
-  labs(x = "Year", y = "GHG Emissions (MtCO2Eq)", fill = "Sector") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-## DCI ----
-ggplot(dci, aes(x = año, y = DCI)) +
-  geom_line(linewidth = 1) +
-  geom_point() +
-  scale_y_continuous(limits = c(0.2, 0.6), breaks = seq(0, 1, 0.1)) +
-  scale_x_continuous(breaks = dci$año) +
+  geom_col(
+    width = 0.82,
+    color = "white",
+    linewidth = 0.15
+  ) +
+  scale_y_continuous(
+    labels = scales::percent_format(accuracy = 1)
+  ) +
+  scale_x_continuous(
+    breaks = 2008:2024,
+    expand = expansion(mult = c(0.01, 0.01))
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Bioenergy"      = "#009E73",
+      "Hydro"          = "#0072B2",
+      "Natural gas"    = "#56B4E9",
+      "Coal and Coke"  = "#4D4D4D",
+      "Oil products"   = "#E69F00",
+      "Solar"          = "#F0E442",
+      "Wind"           = "#CC79A7",
+      "Geothermal"     = "#D55E00"
+    )
+  ) +
   labs(
-    title = "Decarbonization Index (DCI)",
-    subtitle = "Baseline = 100% coal energy system",
+    x = NULL,
+    y = "Share of primary energy production",
+    fill = NULL
+  ) +
+  guides(
+    fill = guide_legend(
+      nrow = 2,
+      byrow = TRUE
+    )
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", size = 16),
+    plot.subtitle = element_text(size = 12),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    legend.position = "bottom",
+    legend.text = element_text(size = 10),
+    legend.key.width = unit(1.1, "lines")
+  )
+
+plot_primary_production_share_2008_2024
+
+ggsave(
+  filename = here("Outputs", "figures", "01_primary_production_share_2008_2024.jpg"),
+  plot = plot_primary_production_share_2008_2024,
+  width = 10,
+  height = 6,
+  dpi = 300
+)
+
+plot_primary_production_level_2008_2024 <- primary_production_fuel_long_2008_2024 |>
+  filter(year >= 2008, year <= 2024) |>
+  mutate(
+    energy_type = fct_relevel(
+      energy_type,
+      "Bioenergy",
+      "Hydro",
+      "Natural gas",
+      "Coal and Coke",
+      "Solar",
+      "Wind",
+      "Geothermal",
+      "Oil products"
+    )
+  ) |>
+  ggplot(aes(x = year, y = tcal, fill = energy_type)) +
+  geom_col(width = 0.82, color = "white", linewidth = 0.15) +
+  scale_y_continuous(
+    labels = scales::comma,
+    expand = expansion(mult = c(0, 0.04))
+  ) +
+  scale_x_continuous(
+    breaks = 2008:2024,
+    expand = expansion(mult = c(0.01, 0.01))
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Bioenergy"      = "#009E73",
+      "Hydro"          = "#0072B2",
+      "Natural gas"    = "#56B4E9",
+      "Coal and Coke"  = "#4D4D4D",
+      "Oil products"   = "#E69F00",
+      "Solar"          = "#F0E442",
+      "Wind"           = "#CC79A7",
+      "Geothermal"     = "#D55E00"
+    )
+  ) +
+  labs(
+    x = NULL,
+    y = "Primary energy production (Tcal)",
+    fill = NULL
+  ) +
+  guides(
+    fill = guide_legend(
+      nrow = 2,
+      byrow = TRUE
+    )
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", size = 16),
+    plot.subtitle = element_text(size = 12),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    legend.position = "bottom",
+    legend.text = element_text(size = 10),
+    legend.key.width = unit(1.1, "lines")
+  )
+
+plot_primary_production_level_2008_2024
+
+ggsave(
+  filename = here("Outputs", "figures", "02_primary_production_level_2008_2024.jpg"),
+  plot = plot_primary_production_level_2008_2024,
+  width = 10,
+  height = 6,
+  dpi = 300
+)
+
+## 2. Installed capacity ----
+plot_installed_capacity_share_2008_2024 <- installed_cap_share_2008_2024 |>
+  mutate(
+    energy_type = fct_relevel(
+      energy_type,
+      "Coal",
+      "Diesel oil",
+      "Natural gas",
+      "Hydro",
+      "Wind",
+      "Solar pv",
+      "Concentrated solar",
+      "Geothermal",
+      "Other"
+    )
+  ) |>
+  ggplot(aes(x = year, y = share, fill = energy_type)) +
+  geom_col(width = 0.82, color = "white", linewidth = 0.15) +
+  scale_y_continuous(
+    labels = scales::percent_format(accuracy = 1)
+  ) +
+  scale_x_continuous(
+    breaks = 2008:2024,
+    expand = expansion(mult = c(0.01, 0.01))
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Coal"              = "#4D4D4D",
+      "Diesel oil"        = "#B5651D",
+      "Natural gas"       = "#4C78A8",
+      "Hydro"             = "#72B7B2",
+      "Wind"              = "#A0CBE8",
+      "Solar pv"          = "#F58518",
+      "Concentrated solar"= "#E45756",
+      "Geothermal"        = "#54A24B",
+      "Other"             = "#9E9E9E"
+    )
+  ) +
+  labs(
+    x = NULL,
+    y = "Share of installed capacity",
+    fill = NULL
+  ) +
+  guides(
+    fill = guide_legend(
+      nrow = 2,
+      byrow = TRUE
+    )
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", size = 16),
+    plot.subtitle = element_text(size = 12),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    legend.position = "bottom",
+    legend.text = element_text(size = 10),
+    legend.key.width = unit(1.1, "lines")
+  )
+
+plot_installed_capacity_share_2008_2024
+
+ggsave(
+  filename = here("Outputs", "figures", "03_installed_capacity_share_2008_2024.jpg"),
+  plot = plot_installed_capacity_share_2008_2024,
+  width = 10,
+  height = 6,
+  dpi = 300
+)
+
+plot_installed_capacity_level_2008_2024 <- installed_cap_long |>
+  filter(year >= 2008, year <= 2024) |>
+  mutate(
+    energy_type = fct_relevel(
+      energy_type,
+      "Coal",
+      "Diesel oil",
+      "Natural gas",
+      "Hydro",
+      "Wind",
+      "Solar pv",
+      "Concentrated solar",
+      "Geothermal",
+      "Other"
+    )
+  ) |>
+  ggplot(aes(x = year, y = mw, fill = energy_type)) +
+  geom_col(
+    width = 0.82,
+    color = "white",
+    linewidth = 0.15
+  ) +
+  scale_y_continuous(
+    labels = scales::comma
+  ) +
+  coord_cartesian(
+    ylim = c(0, 40000)
+  ) +
+  scale_x_continuous(
+    breaks = 2008:2024,
+    expand = expansion(mult = c(0.01, 0.01))
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Coal"               = "#4D4D4D",
+      "Diesel oil"         = "#B5651D",
+      "Natural gas"        = "#4C78A8",
+      "Hydro"              = "#72B7B2",
+      "Wind"               = "#A0CBE8",
+      "Solar pv"           = "#F58518",
+      "Concentrated solar" = "#E45756",
+      "Geothermal"         = "#54A24B",
+      "Other"              = "#9E9E9E"
+    )
+  ) +
+  labs(
+    x = NULL,
+    y = "Installed capacity (MW)",
+    fill = NULL
+  ) +
+  guides(
+    fill = guide_legend(
+      nrow = 2,
+      byrow = TRUE
+    )
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", size = 16),
+    plot.subtitle = element_text(size = 12),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    legend.position = "bottom",
+    legend.text = element_text(size = 10),
+    legend.key.width = unit(1.1, "lines")
+  )
+
+plot_installed_capacity_level_2008_2024
+
+ggsave(
+  filename = here("Outputs", "figures", "04_installed_capacity_level_2008_2024.jpg"),
+  plot = plot_installed_capacity_level_2008_2024,
+  width = 10,
+  height = 6,
+  dpi = 300
+)
+
+## 3. Primary supply ----
+plot_primary_supply_fuel_2008_2024 <- primary_supply_year_fuel_2008_2024 |>
+  ggplot(aes(x = año, y = tcal, fill = fuel)) +
+  geom_col(
+    width = 0.82,
+    linewidth = 0.15
+  ) +
+  scale_y_continuous(
+    limits = c(0, 450000),
+    breaks = seq(0, 450000, by = 50000),
+    labels = scales::comma,
+    expand = expansion(mult = c(0, 0.02))
+  ) +
+  coord_cartesian(
+    ylim = c(0, 450000)
+  ) +
+  scale_x_continuous(
+    breaks = 2008:2024,
+    expand = expansion(mult = c(0.01, 0.01))
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Oil products" = "#4D4D4D",
+      "Natural gas"  = "#4C78A8",
+      "Coal and Coke"= "#B5651D",
+      "Bioenergy"    = "#6BAA75",
+      "Hydro"        = "#72B7B2",
+      "Wind"         = "#A0CBE8",
+      "Solar"        = "#F2CF5B",
+      "Geothermal"   = "#8C6D31"
+    )
+  ) +
+  labs(
+    x = NULL,
+    y = "Primary energy supply (Tcal)",
+    fill = NULL
+  ) +
+  guides(
+    fill = guide_legend(
+      nrow = 2,
+      byrow = TRUE
+    )
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", size = 16),
+    plot.subtitle = element_text(size = 12),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    legend.position = "bottom",
+    legend.text = element_text(size = 10),
+    legend.key.width = unit(1.1, "lines")
+  )
+
+plot_primary_supply_fuel_2008_2024
+
+ggsave(
+  filename = here("Outputs", "figures", "05_primary_supply_fuel_2008_2024.jpg"),
+  plot = plot_primary_supply_fuel_2008_2024,
+  width = 10,
+  height = 6,
+  dpi = 300
+)
+
+plot_primary_supply_share_2008_2024 <- primary_supply_fuel_share_2008_2024 |>
+  mutate(
+    fuel = fct_relevel(
+      fuel,
+      "Oil products",
+      "Natural gas",
+      "Coal and Coke",
+      "Bioenergy",
+      "Hydro",
+      "Wind",
+      "Solar",
+      "Geothermal"
+    )
+  ) |>
+  ggplot(aes(x = año, y = share, fill = fuel)) +
+  geom_col(
+    width = 0.82,
+    linewidth = 0.15
+  ) +
+  scale_y_continuous(
+    labels = scales::percent_format(accuracy = 1),
+    expand = expansion(mult = c(0, 0.01))
+  ) +
+  scale_x_continuous(
+    breaks = 2008:2024,
+    expand = expansion(mult = c(0.01, 0.01))
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Oil products" = "#4D4D4D",
+      "Natural gas"  = "#4C78A8",
+      "Coal and Coke"= "#B5651D",
+      "Bioenergy"    = "#6BAA75",
+      "Hydro"        = "#72B7B2",
+      "Wind"         = "#A0CBE8",
+      "Solar"        = "#F2CF5B",
+      "Geothermal"   = "#8C6D31"
+    )
+  ) +
+  labs(
+    x = NULL,
+    y = "Share of primary energy supply",
+    fill = NULL
+  ) +
+  guides(
+    fill = guide_legend(
+      nrow = 2,
+      byrow = TRUE
+    )
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", size = 16),
+    plot.subtitle = element_text(size = 12),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    legend.position = "bottom",
+    legend.text = element_text(size = 10),
+    legend.key.width = unit(1.1, "lines")
+  )
+
+plot_primary_supply_share_2008_2024
+
+ggsave(
+  filename = here("Outputs", "figures", "06_primary_supply_share_2008_2024.jpg"),
+  plot = plot_primary_supply_share_2008_2024,
+  width = 10,
+  height = 6,
+  dpi = 300
+)
+
+plot_primary_import_main_fuels_2008_2024 <- primary_import_main_fuels_2008_2024 |>
+  mutate(
+    combustible = factor(combustible, levels = c("Crude oil", "Coal", "Natural gas"))
+  ) |>
+  ggplot(aes(x = año, y = tcal, fill = combustible)) +
+  geom_col(width = 0.82, color = "white", linewidth = 0.15, show.legend = FALSE) +
+  facet_wrap(~combustible, nrow = 1) +
+  scale_y_continuous(
+    limits = c(0, 110000),
+    breaks = seq(0, 110000, by = 10000),
+    labels = scales::comma,
+    expand = expansion(mult = c(0, 0.02))
+  ) +
+  scale_x_continuous(
+    breaks = c(2008, 2010, 2012, 2014, 2016, 2018, 2020, 2022, 2024),
+    expand = expansion(mult = c(0.01, 0.01))
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Crude oil"   = "#4D4D4D",
+      "Coal"        = "#B5651D",
+      "Natural gas" = "#4C78A8"
+    )
+  ) +
+  labs(
+    x = NULL,
+    y = "Imports (Tcal)"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", size = 16),
+    plot.subtitle = element_text(size = 12),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    strip.text = element_text(face = "bold", size = 12),
+    legend.position = "none"
+  )
+
+plot_primary_import_main_fuels_2008_2024
+
+ggsave(
+  filename = here("Outputs", "figures", "07_primary_import_main_fuels_2008_2024.jpg"),
+  plot = plot_primary_import_main_fuels_2008_2024,
+  width = 10,
+  height = 6,
+  dpi = 300
+)
+
+## 4. Final consumption ----
+plot_final_consumption_fuel_2008_2024 <- consumption_final_year_fuel_2008_2024 |>
+  ggplot(aes(x = año, y = tcal, fill = fuel)) +
+  geom_col(
+    width = 0.82,
+    color = "white",
+    linewidth = 0.15
+  ) +
+  scale_y_continuous(
+    limits = c(0, 350000),
+    breaks = seq(0, 350000, by = 50000),
+    labels = scales::comma,
+    expand = expansion(mult = c(0, 0.02))
+  ) +
+  scale_x_continuous(
+    breaks = 2008:2024,
+    expand = expansion(mult = c(0.01, 0.01))
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Oil products" = "#4D4D4D",
+      "Natural gas"  = "#4C78A8",
+      "Coal and Coke"= "#B5651D",
+      "Electricity"  = "#E45756",
+      "Bioenergy"    = "#6BAA75"
+    )
+  )  +
+  labs(
+    x = NULL,
+    y = "Final consumption (Tcal)",
+    fill = NULL
+  ) +
+  guides(
+    fill = guide_legend(
+      nrow = 2,
+      byrow = TRUE
+    )
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", size = 16),
+    plot.subtitle = element_text(size = 12),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    legend.position = "bottom",
+    legend.text = element_text(size = 10),
+    legend.key.width = unit(1.1, "lines")
+  )
+
+plot_final_consumption_fuel_2008_2024
+
+ggsave(
+  filename = here("Outputs", "figures", "08_final_consumption_fuel_2008_2024.jpg"),
+  plot = plot_final_consumption_fuel_2008_2024,
+  width = 10,
+  height = 6,
+  dpi = 300
+)
+
+plot_final_consumption_fuel_share_2008_2024 <- final_consumption_fuel_share_2008_2024 |>
+  ggplot(aes(x = año, y = share, fill = fuel)) +
+  geom_col(
+    width = 0.82,
+    color = "white",
+    linewidth = 0.15
+  ) +
+  scale_y_continuous(
+    labels = scales::percent_format(accuracy = 1),
+    expand = expansion(mult = c(0, 0.01))
+  ) +
+  scale_x_continuous(
+    breaks = 2008:2024,
+    expand = expansion(mult = c(0.01, 0.01))
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Oil products" = "#4D4D4D",
+      "Natural gas"  = "#4C78A8",
+      "Coal and Coke"= "#B5651D",
+      "Electricity"  = "#E45756",
+      "Bioenergy"    = "#6BAA75"
+    )
+  ) +
+  labs(
+    x = NULL,
+    y = "Share of final energy consumption",
+    fill = NULL
+  ) +
+  guides(
+    fill = guide_legend(
+      nrow = 2,
+      byrow = TRUE
+    )
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", size = 16),
+    plot.subtitle = element_text(size = 12),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    legend.position = "bottom",
+    legend.text = element_text(size = 10),
+    legend.key.width = unit(1.1, "lines")
+  )
+
+plot_final_consumption_fuel_share_2008_2024
+
+ggsave(
+  filename = here("Outputs", "figures", "09_final_consumption_fuel_share_2008_2024.jpg"),
+  plot = plot_final_consumption_fuel_share_2008_2024,
+  width = 10,
+  height = 6,
+  dpi = 300
+)
+
+plot_final_consumption_sector_2008_2024 <- consumption_final_year_sector_2008_2024 |>
+  mutate(
+    sector_consumo = fct_relevel(
+      sector_consumo,
+      "Sector Energético: Auto Consumo",
+      "Sector Comercial, Público y Residencial",
+      "Sector Industrial y Minero",
+      "Sector Transporte"
+    )
+  ) |>
+  ggplot(aes(x = año, y = tcal, fill = sector_consumo)) +
+  geom_col(
+    width = 0.82,
+    color = "white",
+    linewidth = 0.15
+  ) +
+  scale_y_continuous(
+    limits = c(0, 350000),
+    breaks = seq(0, 350000, by = 50000),
+    labels = scales::comma,
+    expand = expansion(mult = c(0, 0.02))
+  ) +
+  scale_x_continuous(
+    breaks = 2008:2024,
+    expand = expansion(mult = c(0.01, 0.01))
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Sector Transporte" = "#4D4D4D",                      # charcoal (analogous to Oil products)
+      "Sector Industrial y Minero" = "#4C78A8",            # blue (analogous to Natural gas)
+      "Sector Comercial, Público y Residencial" = "#E45756", # coral (analogous to Electricity)
+      "Sector Energético: Auto Consumo" = "#6BAA75"        # green (analogous to Bioenergy)
+    ),
+    labels = c(
+      "Energy sector (Own use)",
+      "Commercial, Public and Residential",
+      "Industry and Mining",
+      "Transport"
+    )
+  ) +
+  labs(
+    x = NULL,
+    y = "Final energy consumption (Tcal)",
+    fill = NULL
+  ) +
+  guides(
+    fill = guide_legend(
+      nrow = 2,
+      byrow = TRUE
+    )
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", size = 16),
+    plot.subtitle = element_text(size = 12),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    legend.position = "bottom",
+    legend.text = element_text(size = 10),
+    legend.key.width = unit(1.2, "lines")
+  )
+
+plot_final_consumption_sector_2008_2024
+
+ggsave(
+  filename = here("Outputs", "figures", "10_final_consumption_sector_2008_2024.jpg"),
+  plot = plot_final_consumption_sector_2008_2024,
+  width = 10,
+  height = 6,
+  dpi = 300
+)
+
+plot_final_consumption_sector_share_2008_2024 <- final_consumption_sector_share_2008_2024 |>
+  mutate(
+    sector_consumo = fct_relevel(
+      sector_consumo,
+      "Sector Energético: Auto Consumo",
+      "Sector Comercial, Público y Residencial",
+      "Sector Industrial y Minero",
+      "Sector Transporte"
+    )
+  ) |>
+  ggplot(aes(x = año, y = share, fill = sector_consumo)) +
+  geom_col(
+    width = 0.82,
+    color = "white",
+    linewidth = 0.15
+  ) +
+  scale_y_continuous(
+    labels = scales::percent_format(accuracy = 1),
+    expand = expansion(mult = c(0, 0.01))
+  ) +
+  scale_x_continuous(
+    breaks = 2008:2024,
+    expand = expansion(mult = c(0.01, 0.01))
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Sector Energético: Auto Consumo" = "#6BAA75",
+      "Sector Comercial, Público y Residencial" = "#E45756",
+      "Sector Industrial y Minero" = "#4C78A8",
+      "Sector Transporte" = "#4D4D4D"
+    ),
+    labels = c(
+      "Energy sector (Own use)",
+      "Commercial, Public and Residential",
+      "Industry and Mining",
+      "Transport"
+    )
+  ) +
+  labs(
+    x = NULL,
+    y = "Share of final energy consumption",
+    fill = NULL
+  ) +
+  guides(
+    fill = guide_legend(
+      nrow = 2,
+      byrow = TRUE
+    )
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", size = 16),
+    plot.subtitle = element_text(size = 12),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    legend.position = "bottom",
+    legend.text = element_text(size = 10),
+    legend.key.width = unit(1.2, "lines")
+  )
+
+plot_final_consumption_sector_share_2008_2024
+
+ggsave(
+  filename = here("Outputs", "figures", "11_final_consumption_sector_share_2008_2024.jpg"),
+  plot = plot_final_consumption_sector_share_2008_2024,
+  width = 10,
+  height = 6,
+  dpi = 300
+)
+
+plot_final_consumption_sector_fuel_2008_2024 <- consumption_final_year_sector_fuel_2008_2024 |>
+  filter(sector_consumo != "Sector Energético: Auto Consumo") |>
+  mutate(
+    sector_consumo = fct_relevel(
+      sector_consumo,
+      "Sector Industrial y Minero",
+      "Sector Transporte",
+      "Sector Comercial, Público y Residencial",
+    ),
+    fuel = fct_relevel(
+      fuel,
+      "Oil products",
+      "Natural gas",
+      "Coal and Coke",
+      "Electricity",
+      "Bioenergy"
+    )
+  ) |>
+  ggplot(aes(x = año, y = tcal, fill = fuel)) +
+  geom_col(
+    width = 0.82,
+    color = "white",
+    linewidth = 0.15
+  ) +
+  facet_wrap(
+    ~sector_consumo,
+    scales = "free_y",
+    ncol = 3
+  ) +
+  scale_y_continuous(
+    limits = c(0, 130000),
+    breaks = seq(0, 130000, by = 10000),
+    labels = scales::comma,
+    expand = expansion(mult = c(0, 0.02))
+  ) +
+  scale_x_continuous(
+    breaks = 2008:2024,
+    expand = expansion(mult = c(0.01, 0.01))
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Oil products" = "#4D4D4D",
+      "Natural gas"  = "#4C78A8",
+      "Coal and Coke"= "#B5651D",
+      "Electricity"  = "#72B7B2",
+      "Bioenergy"    = "#6BAA75"
+    )
+  ) +
+  labs(
+    x = NULL,
+    y = "Final energy consumption (Tcal)",
+    fill = NULL
+  ) +
+  guides(
+    fill = guide_legend(
+      nrow = 1,
+      byrow = TRUE
+    )
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", size = 16),
+    plot.subtitle = element_text(size = 12),
+    strip.text = element_text(face = "bold", size = 12),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    legend.position = "bottom",
+    legend.text = element_text(size = 10),
+    legend.key.width = unit(1.2, "lines")
+  )
+
+plot_final_consumption_sector_fuel_2008_2024
+
+ggsave(
+  filename = here("Outputs", "figures", "12_final_consumption_sector_fuel_2008_2024.jpg"),
+  plot = plot_final_consumption_sector_fuel_2008_2024,
+  width = 12,
+  height = 8,
+  dpi = 300
+)
+
+## 6. DCI ----
+plot_dci_2008_2024 <- dci_2008_2024 |>
+  ggplot(aes(x = año, y = DCI)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2) +
+  scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.1)) +
+  scale_x_continuous(breaks = 2008:2024) +
+  labs(
     x = "Year",
     y = "DCI"
   ) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-### Decomp ----
-ggplot(dci_long, aes(x = año, y = value, color = indicator)) +
-  geom_line(linewidth = 1.2) +
-  geom_point(size = 2) +
+plot_dci_2008_2024
+
+ggsave(
+  filename = here("Outputs", "figures", "14_dci_2008_2024.jpg"),
+  plot = plot_dci_2008_2024,
+  width = 9,
+  height = 5,
+  dpi = 300
+)
+
+### decomp
+labels_dci_2008_2024 <- dci_long_2008_2024 |>
+  group_by(indicator) |>
+  slice_max(año, n = 1) |>
+  ungroup()
+
+plot_dci_decomposition_2008_2024 <- dci_long_2008_2024 |>
+  mutate(
+    indicator = factor(
+      indicator,
+      levels = c("DCI", "DCIOG", "DCINC")
+    )
+  ) |>
+  ggplot(aes(año, value, color = indicator)) +
+  geom_line(linewidth = 1.3) +
+  geom_point(size = 2.6) +
+  geom_text(
+    data = labels_dci_2008_2024,
+    aes(label = indicator),
+    hjust = -0.15,
+    fontface = "bold",
+    size = 4.5,
+    show.legend = FALSE
+  ) +
   scale_color_manual(
     values = c(
-      "DCI"   = "black",
-      "DCIOG" = "#D55E00",
-      "DCINC" = "#009E73"
-    ),
-    labels = c(
-      "DCI"   = "DCI (Total)",
-      "DCIOG" = "DCIOG (Oil & Gas)",
-      "DCINC" = "DCINC (Non-carbon)"
+      "DCI"   = "#F46D65",
+      "DCIOG" = "#2FB84D",
+      "DCINC" = "#5D8FEA"
     )
   ) +
-  scale_y_continuous(limits = c(0, 0.6), breaks = seq(0, 1, 0.1)) +
-  scale_x_continuous(breaks = dci$año) +
-  labs(
-    x = "Year",
-    y = "Index value",
-    color = NULL,
-    title = "Decarbonization Index (DCI) and Contributions by Energy Source",
-    subtitle = "Decomposition into Oil & Gas (DCIOG) and Non-carbon Energy (DCINC)"
+  scale_y_continuous(
+    limits = c(0, 1),
+    breaks = seq(0, 1, by = 0.1),
+    expand = expansion(mult = c(0, 0.02))
   ) +
+  scale_x_continuous(
+    breaks = seq(2008, 2024, by = 2),
+    expand = expansion(mult = c(0.01, 0.08))
+  ) +
+  labs(
+    x = NULL,
+    y = "Index value"
+  ) +
+  coord_cartesian(clip = "off") +
   theme_minimal(base_size = 13) +
   theme(
-    legend.position = "top",
+    plot.title = element_text(face = "bold", size = 16),
+    plot.subtitle = element_text(size = 12),
     panel.grid.minor = element_blank(),
-    axis.text.x = element_text(angle = 45, hjust = 1)) 
+    panel.grid.major.x = element_blank(),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "none",
+    plot.margin = margin(10, 45, 10, 10)
+  )
+
+plot_dci_decomposition_2008_2024
+
+ggsave(
+  filename = here("Outputs", "figures", "15_dci_decomposition_2008_2024.jpg"),
+  plot = plot_dci_decomposition_2008_2024,
+  width = 9,
+  height = 5,
+  dpi = 300
+)
+
+
+## 7. Hourly generation ----
+
+plot_hourly_generation_2015 <- hourly_gen_long_2000_2024 |>
+  filter(
+    year == 2015,
+    month == 1
+  ) |>
+  ggplot(aes(x = hour_num, y = mean_gwh, fill = energy_type)) +
+  geom_stream(type = "ridge") +
+  scale_x_continuous(
+    breaks = seq(0, 24, by = 3),
+    labels = case_when(
+      seq(0, 24, by = 3) == 12 ~ "noon",
+      seq(0, 24, by = 3) == 24 ~ "00:00",
+      TRUE ~ sprintf("%02d:00", seq(0, 24, by = 3))
+    )
+  ) +
+  labs(
+    x = "Hour",
+    y = "Mean generation (GWh)",
+    fill = "Energy type",
+    title = "Mean hourly generation by energy type, January 2015"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+plot_hourly_generation_2015
+
+ggsave(
+  filename = here("Outputs", "figures", "18_hourly_generation_2015.jpg"),
+  plot = plot_hourly_generation_2015,
+  width = 10,
+  height = 6,
+  dpi = 300
+)
+
+plot_hourly_generation_2023 <- hourly_gen_long_2000_2024 |>
+  filter(year == 2023,
+         month == 1) |>
+  ggplot(aes(x = hour_num, y = mean_gwh, fill = energy_type)) +
+  geom_stream(type = "ridge") +
+  scale_x_continuous(
+    breaks = seq(0, 24, by = 3),
+    labels = case_when(
+      seq(0, 24, by = 3) == 12 ~ "noon",
+      seq(0, 24, by = 3) == 24 ~ "00:00",
+      TRUE ~ sprintf("%02d:00", seq(0, 24, by = 3))
+    )
+  ) +
+  labs(
+    x = "Hour",
+    y = "Mean generation (GWh)",
+    fill = "Energy type",
+    title = "Mean hourly generation by energy type, January 2023"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+plot_hourly_generation_2023
+
+ggsave(
+  filename = here("Outputs", "figures", "19_hourly_generation_2023.jpg"),
+  plot = plot_hourly_generation_2023,
+  width = 10,
+  height = 6,
+  dpi = 300
+)
+
+### test ----
+hour_labels <- c(
+  "0am", "3am", "6am", "9am",
+  "noon", "3pm", "6pm", "9pm", "0am"
+)
+
+hour_breaks <- seq(0, 24, by = 3)
+
+hourly_gen_2014_jan <- hourly_generation_long_2000_2024 |>
+  filter(year == 2014, month == 1) |>
+  mutate(
+    energy_type = fct_relevel(
+      energy_type,
+      "Wind power",
+      "Thermal",
+      "Solar",
+      "Hydropower"
+    )
+  )
+
+hourly_gen_2024_jan <- hourly_gen_long_2000_2024 |>
+  filter(year == 2024, month == 1, energy_type != "Bess") |>
+  mutate(
+    energy_type = fct_relevel(
+      energy_type,
+      "Wind power",
+      "Thermal",
+      "Solar",
+      "Hydropower"
+    ),
+    mean_mw = mean_gwh * 1000
+  )
+
+plot_hourly_generation_2014 <- hourly_gen_2014_jan |>
+  ggplot(aes(x = hour_num, y = mean_mw, fill = energy_type)) +
+  geom_area(
+    position = "stack",
+    linewidth = 0.15,
+    color = "grey70",
+    alpha = 0.95
+  ) +
+  scale_x_continuous(
+    breaks = hour_breaks,
+    labels = hour_labels,
+    expand = expansion(mult = c(0.02, 0.02))
+  ) +
+  scale_y_continuous(
+    limits = c(0, 90000),
+    breaks = seq(0, 90000, by = 10000),
+    labels = scales::comma,
+    expand = expansion(mult = c(0, 0.02))
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Thermal"     = "#4C78A8",
+      "Hydropower"  = "#72B7B2",
+      "Wind power"  = "#A0CBE8",
+      "Solar"       = "#F2CF5B",
+      "Geothermal"  = "#8C6D31",
+      "Bess"        = "#E45756"
+    )
+  ) +
+  labs(
+    title = "January 2014",
+    x = NULL,
+    y = "Mean generation (MW)",
+    fill = "Energy type"
+  ) +
+  theme_classic(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", size = 15, hjust = 0.5),
+    plot.subtitle = element_text(size = 11, hjust = 0.5),
+    axis.title.y = element_text(size = 12),
+    axis.text.x = element_text(
+      angle = 45,
+      hjust = 1,
+      vjust = 1,
+      size = 10
+    ),
+    legend.position = "bottom",
+    legend.title = element_text(size = 11),
+    legend.text = element_text(size = 10),
+    panel.grid.major.y = element_line(color = "grey85", linewidth = 0.3),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+plot_hourly_generation_2024 <- hourly_gen_2024_jan |>
+  ggplot(aes(x = hour_num, y = mean_mw, fill = energy_type)) +
+  geom_area(
+    position = "stack",
+    linewidth = 0.15,
+    color = "grey70",
+    alpha = 0.95
+  ) +
+  scale_x_continuous(
+    breaks = hour_breaks,
+    labels = hour_labels,
+    expand = expansion(mult = c(0.02, 0.02))
+  ) +
+  scale_y_continuous(
+    limits = c(0, 90000),
+    breaks = seq(0, 90000, by = 10000),
+    labels = scales::comma,
+    expand = expansion(mult = c(0, 0.02))
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Thermal"     = "#4C78A8",
+      "Hydropower"  = "#72B7B2",
+      "Wind power"  = "#A0CBE8",
+      "Solar"       = "#F2CF5B",
+      "Geothermal"  = "#8C6D31",
+      "Bess"        = "#E45756"
+    )
+  ) +
+  labs(
+    title = "January 2024",
+    y = NULL,
+    x = NULL,
+    fill = "Energy type"
+  ) +
+  theme_classic(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", size = 15, hjust = 0.5),
+    plot.subtitle = element_text(size = 11, hjust = 0.5),
+    axis.title.y = element_text(size = 12),
+    axis.text.x = element_text(
+      angle = 45,
+      hjust = 1,
+      vjust = 1,
+      size = 10
+    ),
+    legend.position = "bottom",
+    legend.title = element_text(size = 11),
+    legend.text = element_text(size = 10),
+    panel.grid.major.y = element_line(color = "grey85", linewidth = 0.3),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+plot_hourly_generation_2014 + plot_hourly_generation_2024
+
+ggsave(
+  filename = here("Outputs", "figures", "18_hourly_generation_2014_vs_2024.jpg"),
+  plot = plot_hourly_generation_2014 + plot_hourly_generation_2024,
+  width = 10,
+  height = 6,
+  dpi = 300
+)
+
+# Test 2-----
+hourly_generation_oct_2000_2024 <- hourly_generation_long_2000_2024 |>
+  filter(
+    month == 10,
+    !is.na(energy_type)
+  ) |>
+  group_by(year, date, hour, energy_type) |>
+  summarise(
+    total_mw = sum(mw, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  group_by(year, hour, energy_type) |>
+  summarise(
+    mean_mw = mean(total_mw, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  mutate(
+    energy_type = factor(
+      energy_type,
+      levels = c("Wind power", "Thermal", "Solar", "Hydropower", "Geothermal", "BESS")
+    )
+  )
+
+plot_hourly_generation_2014 <- hourly_generation_oct_2000_2024 |>
+  filter(year == 2014) |>
+  ggplot(aes(x = hour, y = mean_mw, fill = energy_type)) +
+  geom_area(
+    position = "stack",
+    linewidth = 0.15,
+    color = "grey70",
+    alpha = 0.95
+  ) +
+  scale_x_continuous(
+    breaks = c(0, 3, 6, 9, 12, 15, 18, 21, 24),
+    labels = c(
+      "0am", "3am", "6am", "9am",
+      "noon", "3pm", "6pm", "9pm", "0am"
+    ),
+    limits = c(0, 24),
+    expand = c(0, 0)
+  ) +
+  scale_y_continuous(
+    limits = c(0, 11000),
+    breaks = seq(0, 11000, by = 1000),
+    labels = scales::comma,
+    expand = expansion(mult = c(0, 0.02))
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Thermal"     = "#4C78A8",
+      "Hydropower"  = "#72B7B2",
+      "Wind power"  = "#A0CBE8",
+      "Solar"       = "#F2CF5B",
+      "Geothermal"  = "#8C6D31",
+      "BESS"        = "#E45756"
+    )
+  ) +
+  labs(
+    title = "October 2014",
+    x = NULL,
+    y = "Mean generation (MW)",
+    fill = NULL
+  ) +
+  theme_classic(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", size = 15, hjust = 0.5),
+    axis.title.y = element_text(size = 12),
+    axis.text.x = element_text(
+      angle = 45,
+      hjust = 1,
+      vjust = 1,
+      size = 10
+    ),
+    legend.position = "none",
+    panel.grid.major.y = element_line(color = "grey85", linewidth = 0.3),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+plot_hourly_generation_2024 <- hourly_generation_oct_2000_2024 |>
+  filter(year == 2024) |>
+  ggplot(aes(x = hour, y = mean_mw, fill = energy_type)) +
+  geom_area(
+    position = "stack",
+    linewidth = 0.15,
+    color = "grey70",
+    alpha = 0.95
+  ) +
+  scale_x_continuous(
+    breaks = c(0, 3, 6, 9, 12, 15, 18, 21, 24),
+    labels = c(
+      "0am", "3am", "6am", "9am",
+      "noon", "3pm", "6pm", "9pm", "0am"
+    ),
+    limits = c(0, 24),
+    expand = c(0, 0)
+  ) +
+  scale_y_continuous(
+    limits = c(0, 11000),
+    breaks = seq(0, 11000, by = 1000),
+    labels = scales::comma,
+    expand = expansion(mult = c(0, 0.02))
+  ) +
+  scale_fill_manual(
+    values = c(
+      "Thermal"     = "#4C78A8",
+      "Hydropower"  = "#72B7B2",
+      "Wind power"  = "#A0CBE8",
+      "Solar"       = "#F2CF5B",
+      "Geothermal"  = "#8C6D31",
+      "BESS"        = "#E45756"
+    )
+  ) +
+  labs(
+    title = "October 2024",
+    x = NULL,
+    y = NULL,
+    fill = "Energy type"
+  ) +
+  theme_classic(base_size = 13) +
+  theme(
+    plot.title = element_text(face = "bold", size = 15, hjust = 0.5),
+    axis.title.y = element_blank(),
+    axis.text.x = element_text(
+      angle = 45,
+      hjust = 1,
+      vjust = 1,
+      size = 10
+    ),
+    legend.position = "right",
+    panel.grid.major.y = element_line(color = "grey85", linewidth = 0.3),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+plot_hourly_generation_2014_2024 <- 
+  plot_hourly_generation_2014 + plot_hourly_generation_2024
+
+plot_hourly_generation_2014_2024
+
+ggsave(
+  filename = here("Outputs", "figures", "17_hourly_generation_2014_vs_2024.jpg"),
+  plot = plot_hourly_generation_2014_2024,
+  width = 10,
+  height = 6,
+  dpi = 300
+)
 
