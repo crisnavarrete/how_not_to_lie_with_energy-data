@@ -322,28 +322,25 @@ energy_primary_supply_2008_2024 <- energy_supply_2008_2024|>
     tcal = if_else(categoria == "Exportación", -tcal, tcal)
   ) 
 
-energy_primary_supply_2008_2024 <- energy_supply_2008_2024 |>
-  filter(categoria %in% c("Producción Primaria", "Importación", "Exportación"))
-
 energy_primary_production_2008_2024 <- energy_supply_2008_2024 |>
-  filter(categoria == "Producción Primaria")
+  filter(categoria == "Producción Primaria", tcal > 0)
 
 energy_primary_import_2008_2024 <- energy_supply_2008_2024 |>
-  filter(categoria == "Importación")
+  filter(categoria == "Importación", tcal > 0)
 
 energy_supply_components_2008_2024 <- energy_supply_2008_2024 |>
-  filter(categoria != "Oferta Total")
+  filter(categoria != "Oferta Total", tcal > 0)
 
 ## 2. Consumption ----
 
 energy_consumption_total_2008_2024 <- bne_2008_2024_cleaned |>
-  filter(item %in% c("CONSUMO FINAL", "C.TRANSFO."))
+  filter(item %in% c("CONSUMO FINAL", "C.TRANSFO."), , tcal > 0)
 
 energy_consumption_final_2008_2024 <- bne_2008_2024_cleaned |>
   filter(item == "CONSUMO FINAL", !is.na(sector_consumo), tcal > 0)
 
 energy_consumption_transformation_2008_2024 <- bne_2008_2024_cleaned |>
-  filter(item == "C.TRANSFO.")
+  filter(item == "C.TRANSFO.", tcal > 0)
 
 ## 3. Sector subsets for final consumption ----
 
