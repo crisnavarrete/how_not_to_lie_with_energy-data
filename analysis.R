@@ -73,10 +73,7 @@ installed_cap <- read_excel(
   sheet = "Installed Capacity (MW)"
 )
 
-hourly_gen_2000_2024 <- read_excel(
-  here("Datasets", "full_energy_dfs_2026_02_10.xlsx"),
-  sheet = "Hourly Generation by Plant"
-)
+load(here("Datasets", "clean", "hourly_generation_long_2000_2024.RData"))
 
 # II Data handling ----
 
@@ -161,37 +158,6 @@ installed_cap_share_2008_2024 <- installed_cap_long |>
     share = mw / sum(mw, na.rm = TRUE)
   ) |>
   ungroup()
-
-## 3. Hourly generation ----
-hourly_gen_2000_2024 <- hourly_gen_2000_2024 |>
-  mutate(
-    date = as.Date(date),
-    year = lubridate::year(date)
-  )
-
-hourly_gen_long_2000_2024 <- hourly_gen_2000_2024 |>
-  pivot_longer(
-    cols = starts_with("h"),
-    names_to = "hour",
-    values_to = "gwh"
-  ) |>
-  mutate(
-    year = lubridate::year(date),
-    month = lubridate::month(date),
-    month_name = lubridate::month(date, label = TRUE, abbr = FALSE),
-    day = lubridate::day(date),
-    hour_num = as.numeric(str_remove(hour, "^h")),
-    energy_type = str_replace_all(energy_type, "_", " "),
-    energy_type = str_to_sentence(energy_type)
-  ) |>
-  filter(
-    day <= 7
-  ) |>
-  group_by(year, month, month_name, energy_type, hour_num) |>
-  summarise(
-    mean_gwh = mean(gwh, na.rm = TRUE),
-    .groups = "drop"
-  )
 
 ## 4. BNE plot-ready tables ----
 final_consumption_fuel_share_2008_2024 <- consumption_final_year_fuel_2008_2024 |>
@@ -655,7 +621,14 @@ ggsave(
 )
 
 ## 3. Primary supply ----
-plot_primary_supply_fuel_2008_2024 <- primary_supply_year_fuel_2008_2024 |>
+primary_supply_year_fuel_plot <- primary_supply_year_fuel_2008_2024 |>
+  group_by(año, fuel) |>
+  summarise(
+    tcal = sum(tcal, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+plot_primary_supply_fuel_2008_2024 <- primary_supply_year_fuel_plot |>
   ggplot(aes(x = año, y = tcal, fill = fuel)) +
   geom_col(
     width = 0.82,
@@ -666,9 +639,6 @@ plot_primary_supply_fuel_2008_2024 <- primary_supply_year_fuel_2008_2024 |>
     breaks = seq(0, 450000, by = 50000),
     labels = scales::comma,
     expand = expansion(mult = c(0, 0.02))
-  ) +
-  coord_cartesian(
-    ylim = c(0, 450000)
   ) +
   scale_x_continuous(
     breaks = 2008:2024,
@@ -718,6 +688,19 @@ ggsave(
   height = 6,
   dpi = 300
 )
+
+primary_supply_fuel_share_2008_2024 <- primary_supply_year_fuel_2008_2024 |>
+  group_by(año, fuel) |>
+  summarise(
+    tcal = sum(tcal, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  group_by(año) |>
+  mutate(
+    annual_total_tcal = sum(tcal, na.rm = TRUE),
+    share = tcal / annual_total_tcal
+  ) |>
+  ungroup()
 
 plot_primary_supply_share_2008_2024 <- primary_supply_fuel_share_2008_2024 |>
   mutate(
@@ -1275,18 +1258,32 @@ ggsave(
 
 
 ## 7. Hourly generation ----
+hourly_generation_long_2000_2024 |> 
+  count(energy_type) 
+
+hourly_generation_long_2000_2024 |> 
+  glimpse()
 
 hourly_generation_oct_2000_2024 <- hourly_generation_long_2000_2024 |>
   filter(
     month == 10,
     !is.na(energy_type)
   ) |>
-  group_by(year, date, hour, energy_type) |>
+  group_by(
+    year,
+    date,
+    hour,
+    energy_type
+  ) |>
   summarise(
     total_mw = sum(mw, na.rm = TRUE),
     .groups = "drop"
   ) |>
-  group_by(year, hour, energy_type) |>
+  group_by(
+    year,
+    hour,
+    energy_type
+  ) |>
   summarise(
     mean_mw = mean(total_mw, na.rm = TRUE),
     .groups = "drop"
@@ -1294,9 +1291,24 @@ hourly_generation_oct_2000_2024 <- hourly_generation_long_2000_2024 |>
   mutate(
     energy_type = factor(
       energy_type,
-      levels = c("Wind power", "Thermal", "Solar", "Hydropower", "Geothermal", "BESS")
+      levels = c(
+        "Wind power",
+        "Thermal",
+        "Solar",
+        "Hydropower",
+        "Geothermal",
+        "BESS"
+      )
     )
+  ) |>
+  arrange(
+    year,
+    hour,
+    energy_type
   )
+
+hourly_generation_oct_2000_2024 |>
+  count(energy_type)
 
 plot_hourly_generation_2014 <- hourly_generation_oct_2000_2024 |>
   filter(year == 2014) |>
