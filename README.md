@@ -27,7 +27,7 @@ The measures answer different questions. Energy balance quantities are in **tera
 ## Data inputs and provenance
 
 | Input read by the scripts | Role and coverage |
-|------------------------------------|------------------------------------|
+|----|----|
 | `Datasets/bne_balance_nacional.csv` | Historical national energy balance, 2008–2021. The script reads semicolon separated values with decimal commas. CNE |
 | `Datasets/bne_2022_2024.xlsx` | National energy balance for 2022–2024. CNE |
 | `Datasets/full_energy_dfs_2026_02_10.xlsx` | Installed capacity from the `Installed Capacity (MW)` worksheet. CNE |
@@ -41,7 +41,7 @@ The files above are the **direct inputs** to the two R scripts. Other workbooks 
 ## Analytical workflow
 
 | Stage | Script | Reads | Writes |
-|------------------|------------------|------------------|------------------|
+|----|----|----|----|
 | 1\. Prepare data | `cleaning_energy.R` | National balance CSV and workbook; four hourly generation workbooks | Cleaned balance, annual supply and consumption series, DCI series, and hourly generation objects in `Datasets/clean/` |
 | 2\. Analyse and plot | `analysis.R` | Stage 1 outputs; installed capacity workbook | `Outputs/tables/analysis_tables_2008_2024.xlsx` and JPEGs in `Outputs/figures/` |
 
@@ -84,7 +84,7 @@ The main workbook, `Outputs/tables/analysis_tables_2008_2024.xlsx`, contains ann
 `analysis.R` saves the following JPEG figure groups to `Outputs/figures/`:
 
 | Numbers | Subject |
-|------------------------------------|------------------------------------|
+|----|----|
 | 01–02 | Primary energy production: fuel shares and levels |
 | 03–04 | Installed electricity capacity: shares and levels |
 | 05–07 | Primary supply and principal imported fuels |
